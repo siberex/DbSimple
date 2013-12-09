@@ -1248,11 +1248,15 @@ class DbSimple_SubQuery
      * @param &array|null - ссылка на массив плейсхолдеров
      * @return string
      */
-    public function get(&$ph)
+    public function get(&$ph = null)
     {
         if ($ph !== null)
             $ph = array_merge($ph, array_slice($this->query,1,null,true));
         return $this->query[0];
+    }
+
+    public function __toString() {
+        return $this->get();
     }
 }
 
