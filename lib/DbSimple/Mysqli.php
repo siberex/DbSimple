@@ -32,11 +32,10 @@ class DbSimple_Mysqli extends DbSimple_Database
      */
     function DbSimple_Mysqli($dsn)
     {
-        
         if (!is_callable("mysqli_connect"))
             return $this->_setLastError("-1", "MySQLi extension is not loaded", "mysqli_connect");
         
-        if (!empty($dsn["persist"])) {
+        if ( !empty($dsn["persist"]) && !empty($dsn['host']) ) {
             if (version_compare(PHP_VERSION, '5.3') < 0) {
                 return $this->_setLastError("-1", "Persistent connections in MySQLi is allowable since PHP 5.3", "mysqli_connect");
             } else {
@@ -44,28 +43,54 @@ class DbSimple_Mysqli extends DbSimple_Database
             }
         }
 
+        if ( empty($dsn['user']) ) {
+            $dsn['user'] = ini_get("mysqli.default_user");
+            if ($dsn['user'] === false)
+                $dsn['user']  = "root";
+        }
+        if ( empty($dsn['pass']) ) {
+            $dsn['pass'] = ini_get("mysqli.default_pw");
+            if ($dsn['pass'] === false)
+                $dsn['pass']  = "";
+        }
+        $dsn['path'] = preg_replace('{^/}s', '', $dsn['path']);
+
         if ( isset($dsn['socket']) ) {
             // Socket connection
             $this->link = mysqli_connect(
-                null                                         // host
-                ,empty($dsn['user']) ? 'root' : $dsn['user'] // user
-                ,empty($dsn['pass']) ? '' : $dsn['pass']     // password
-                ,preg_replace('{^/}s', '', $dsn['path'])     // schema
-                ,null                                        // port
-                ,$dsn['socket']                              // socket
-            );
-        } else if (isset($dsn['host']) ) {
-            // Host connection
-            $this->link = mysqli_connect(
-                $dsn['host']
-                ,empty($dsn['user']) ? 'root' : $dsn['user']
-                ,empty($dsn['pass']) ? '' : $dsn['pass']
-                ,preg_replace('{^/}s', '', $dsn['path'])
-                ,empty($dsn['port']) ? null : $dsn['port']
+                null              // host
+                ,$dsn['user']     // user
+                ,$dsn['pass']     // password
+                ,$dsn['path']     // schema
+                ,null             // port
+                ,$dsn['socket']   // socket
             );
         } else {
-            return $this->_setDbError('mysqli_connect()');
+            // Host connection
+            if ( !isset($dsn['host']) ) {
+                ini_get("mysqli.default_host");
+            }
+            if ( !$dsn['host'] ) {
+                return $this->_setDbError('mysqli_connect()');
+            }
+
+            if (strtolower($dsn['host']) == 'localhost') {
+                // MySQL tries to connect by socket in this case.
+                $defaultSocket = ini_get("mysqli.default_socket");
+                if (!$defaultSocket || !is_readable($defaultSocket)) {
+                    $dsn['host'] = '127.0.0.1';
+                }
+            }
+
+            $this->link = mysqli_connect(
+                $dsn['host']
+                ,$dsn['user']
+                ,$dsn['pass']
+                ,$dsn['path']
+                ,empty($dsn['port']) ? null : $dsn['port']
+            );
         }
+
         $this->_resetLastError();
         if (!$this->link) return $this->_setDbError('mysqli_connect()');
         
@@ -178,7 +203,7 @@ class DbSimple_Mysqli extends DbSimple_Database
     protected function _performFetch($result)
     {
         $row = mysqli_fetch_assoc($result);
-        if (mysql_error()) return $this->_setDbError($this->_lastQuery);
+        if ( mysqli_error($this->link) ) return $this->_setDbError($this->_lastQuery);
         if ($row === false) return null;
         return $row;
     }

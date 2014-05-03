@@ -88,11 +88,13 @@ class DbSimple_Generic
      *
      * You can connect to MySQL by socket using this new syntax (like PDO DSN):
      * $dsn = 'mysqli:unix_socket=/cloudsql/app:instance;user=root;pass=;dbname=testdb';
+     * $dsn = 'mysqli:host=127.0.0.1;user=root;pass=youshallpass;dbname=testdb;persist=1';
      * $dsn = 'mypdo:unix_socket=/cloudsql/app:instance;charset=utf8;user=testuser;pass=mypassword;dbname=testdb';
      *
      * Connection by host also can be made with this syntax.
      * Or you can use old syntax:
      * $dsn = 'mysql://testuser:mypassword@127.0.0.1/testdb';
+     * $dsn = 'mysqli://testuser:mypassword@127.0.0.1/testdb?persist=1';
      *
      */
     public static function connect($dsn)
@@ -142,7 +144,7 @@ class DbSimple_Generic
         if ( empty($parsed['host']) && empty($parsed['socket']) ) {
             // Parse as DBO DSN string
             $parsedPdo = self::parseDsnPdo($parsed['path']);
-            unset($parsed['path']);
+            $parsed['path'] = "";
             $parsed = array_merge($parsed, $parsedPdo);
         }
 
