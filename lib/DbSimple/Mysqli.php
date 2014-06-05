@@ -53,7 +53,11 @@ class DbSimple_Mysqli extends DbSimple_Database
             if ($dsn['pass'] === false)
                 $dsn['pass']  = "";
         }
-        $dsn['path'] = preg_replace('{^/}s', '', $dsn['path']);
+        if ( !empty($dsn['path']) ) {
+            $dsn['path'] = preg_replace('{^/}s', '', $dsn['path']);
+        } else {
+            $dsn['path'] = '';
+        }
 
         if ( isset($dsn['socket']) ) {
             // Socket connection
